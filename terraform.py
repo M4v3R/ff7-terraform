@@ -40,7 +40,7 @@ def dump_functions(functions, directory):
 				outfile.write('# System Function ID %02d\n' % entry[2])
 
 			elif entry[0] == FUNCTION_MODEL:
-				modelname = MODELS[entry[3]] if entry[3] in MODELS else 'Unknown'
+				modelname = MODELS[str(entry[3])] if str(entry[3]) in MODELS else 'Unknown'
 				outfile.write('# Model ID %02d (%s), Function ID %02d\n' % (entry[3], modelname, entry[2]))
 
 			elif entry[0] == FUNCTION_MESH:

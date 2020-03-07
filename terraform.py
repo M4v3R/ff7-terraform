@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 '''
 Terraform - World Map script editor for Final Fantasy VII
-by Maciej "mav" Trębacz
+by Maciej "mav" Trebacz
 '''
 
 import re

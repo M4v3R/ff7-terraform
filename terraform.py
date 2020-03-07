@@ -46,7 +46,8 @@ def dump_functions(functions, directory):
 			elif entry[0] == FUNCTION_MESH:
 				outfile.write('# Mesh Function ID %d, Mesh Type %d\n' % (entry[2], entry[3]))
 
-			outfile.write('# Start offset: 0x%04x\n\n' % entry[1])
+			offset = entry[1] * 2 + 0x400
+			outfile.write('# Start offset: 0x%04x\n\n' % offset)
 
 			for opcode in opcodes:
 				indent = ''

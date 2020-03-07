@@ -6,6 +6,7 @@ Terraform - World Map script editor for Final Fantasy VII
 by Maciej "mav" Trebacz
 '''
 
+import struct
 import re
 from sys import argv
 from os import makedirs
@@ -32,7 +33,21 @@ def dump_functions(functions, directory):
 		name = function[0]
 		opcodes = function[1]
 		labels = function[2]
+		entry = function[3]
 		with open(directory + '/' + name + '.s', 'w') as outfile:
+			# Write headers
+			if entry[0] == FUNCTION_SYSTEM:
+				outfile.write('# System Function ID %02d\n' % entry[2])
+
+			elif entry[0] == FUNCTION_MODEL:
+				modelname = MODELS[entry[3]] if entry[3] in MODELS else 'Unknown'
+				outfile.write('# Model ID %02d (%s), Function ID %02d\n' % (entry[3], modelname, entry[2]))
+
+			elif entry[0] == FUNCTION_MESH:
+				outfile.write('# Mesh Function ID %d, Mesh Type %d\n' % (entry[2], entry[3]))
+
+			outfile.write('# Start offset: 0x%04x\n\n' % entry[1])
+
 			for opcode in opcodes:
 				indent = ''
 				for i in range(0, opcode[3]):
@@ -48,6 +63,12 @@ def dump_functions(functions, directory):
 					continue
 
 				text = f"{indent}{opcode[0]}({', '.join(opcode[1])})"
+
+				hex_text = ''
+				for h in opcode[4]:
+					hex_text += ' %s' % struct.pack('<H', h).hex()
+
+				outfile.write(indent + "#" + hex_text + "\n")
 				outfile.write(text + "\n")
 
 			outfile.close()
@@ -92,10 +113,11 @@ def read_functions(index, code):
 		while opcode[0] != OPCODES[0x203][0]: 
 			params = []
 			word = code[pos]
+			words = [word]
 			pos += 1
 
 			if not word in OPCODES:
-				opcodes.append(("Unknown%04x" % word, [], pos - 1, indent))
+				opcodes.append(("Unknown%04x" % word, [], pos - 1, indent, words))
 				continue
 
 			opcode = OPCODES[word]
@@ -104,6 +126,7 @@ def read_functions(index, code):
 			if opcode[1] > 0:
 				for i in range(0, opcode[1]):
 					op = opcodes.pop()
+					words = op[4] + words
 
 					# If current opcode is 'IsEqual', and its param is a SpecialByte($PlayerEntityModelId)
 					# adjust the second param with a constant for better readibility
@@ -165,9 +188,12 @@ def read_functions(index, code):
 			# Code arguments
 			if opcode[2] > 0:
 				for i in range(0, opcode[2]):
+					word = code[pos]
+					words.append(word)
+
 					if opcode[0] == OPCODES[0x114][0]: # SavemapBit
-						bit = code[pos] % 8
-						byte = int(code[pos] / 8) + 0xBA4
+						bit = word % 8
+						byte = int(word / 8) + 0xBA4
 						if byte in SAVEMAP_VARS:
 							params.append("$" + SAVEMAP_VARS[byte])
 						else:
@@ -175,33 +201,33 @@ def read_functions(index, code):
 						params.append(str(bit))
 
 					elif opcode[0] in [OPCODES[0x118][0], OPCODES[0x11c][0]]: # SavemapByte or SavemapWord
-						byte = int(code[pos] / 8) + 0xBA4
+						byte = int(word / 8) + 0xBA4
 						if byte in SAVEMAP_VARS:
 							params.append("$" + SAVEMAP_VARS[byte])
 						else:
 							params.append("0x" + ("%04x" % byte).upper())
 
 					elif opcode[0] in [OPCODES[0x117][0], OPCODES[0x11b][0], OPCODES[0x11f][0]] \
-						and str(code[pos]) in SPECIAL_VARS: # Special*
-						params.append("$" + SPECIAL_VARS[str(code[pos])])
+						and str(word) in SPECIAL_VARS: # Special*
+						params.append("$" + SPECIAL_VARS[str(word)])
 
 					elif opcode[0] == OPCODES[0x200][0]: # GoTo
-						if code[pos] not in labels:
-							labels.append(code[pos])
-						idx = labels.index(code[pos]) + 1
+						if word not in labels:
+							labels.append(word)
+						idx = labels.index(word) + 1
 						params.append(f"LABEL_{str(idx)}")
 
 					elif opcode[0] == OPCODES[0x201][0]: # If
-						jumps.append(code[pos])
+						jumps.append(word)
 						pos += 1
 						continue
 
 					else:
-						params.append(str(code[pos]))
+						params.append(str(word))
 
 					pos += 1
 
-			opcodes.append((opcode[0], params, pos - 1 - opcode[2], indent))
+			opcodes.append((opcode[0], params, pos - 1 - opcode[2], indent, words))
 
 			# De-indent when a jump was made here
 			while pos in jumps:
@@ -212,7 +238,7 @@ def read_functions(index, code):
 			if opcode[0] == OPCODES[0x201][0]:
 				indent += 1				
 
-		functions.append((name, opcodes, labels))
+		functions.append((name, opcodes, labels, entry))
 
 	return functions
 

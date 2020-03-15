@@ -17,6 +17,16 @@ class CompilerTest(TestCase):
     def test_end(self):
         CompilerTest.assert_compiled('End', '0302')
 
+    def test_simple_func(self):
+        CompilerTest.assert_compiled('PlayLayerAnimation(6)', '1001 0600 4a03')
+
+    def test_nested_func(self):
+        CompilerTest.assert_compiled('WriteTo(TempByte(2), SpecialByte(15))', '1901 0200 1b01 0f00 e000')
+
+    def test_constants(self):
+        CompilerTest.assert_compiled('SetEntityDirection(SpecialByte($EntityDirection) + 128)',
+                                     '1b01 0400 1001 8000 4000 0403')
+
     # def test_simple_value(self):
     #     CompilerTest.assert_compiled('6', '1001 0600')
     #
@@ -96,6 +106,9 @@ class ParserTest(TestCase):
     def test_complex_if(self):
         lines = ParserTest.parse("""
             If GetDistanceToModel(SpecialByte($PlayerEntityModelId)) <= 75 Then
-                  GoTo @LABEL_1
- 
+            WriteTo(Frames(10))
+            EndIf
+            TestFunc(123)
+            GoTo @LABEL_1
+            @LABEL_1
         """)

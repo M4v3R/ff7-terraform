@@ -71,7 +71,7 @@ value: NUMERIC_LITERAL
 
 variable: "$" ID
 
-goto_stmt: _GOTO_KW label
+goto_stmt: _GOTO_KW _LABEL_KW NUMERIC_LITERAL
 
 _GOTO_KW: "goto"i
 _LABEL_KW: "@label_"i

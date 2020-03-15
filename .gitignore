@@ -1,4 +1,6 @@
 __pycache__
 .vscode
+.idea
 output
+temp
 world_us.lgp

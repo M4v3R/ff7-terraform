@@ -180,7 +180,7 @@ CHAR = {
     'ESCAPE': set(u"\\{}"),
 }
 KANJI_BANK = {0xFA:'KANJI_SET1', 0xFB:'KANJI_SET2', 0xFC:'KANJI_SET3', 0xFD:'KANJI_SET4', 0xFE:'KANJI_SET5'}
-#FIELD_COMMAND = {**{v:k for k, v in CHAR['FIELD_SPECIAL'].items() if v}, **{v:('\xfe' + k) for k, v in CHAR['FIELD_CONTROL'].items()}}
+fieldCommands = {**{v:(pack('B', k)) for k, v in CHAR['FIELD_SPECIAL'].items() if v}, **{v:(pack('B', 0xFE) + pack('B', k)) for k, v in CHAR['FIELD_CONTROL'].items() if v}}
 
 # errors
 
@@ -335,7 +335,8 @@ def encode_text(text, field=True, JP=False):
                 # simple command without argumentss
                 else:
                     try:
-                        code = fieldCommands['{' + command + '}']; data += code
+                        code = fieldCommands['{' + command + '}'];
+                        data += code
                         if command == "NEW": # strip extra newline after NEW command
                             if (i < text_length) and (text[i] == u'\n'):
                                 i += 1
@@ -368,22 +369,22 @@ def encode_text(text, field=True, JP=False):
         else:
             if field:
                 if c == u'\t':
-                    data += '\xE1'
+                    data += pack('B', 0xE1)
                     continue
                 elif c == u'\n':
-                    data += '\xE7'
+                    data += pack('B', 0xE7)
                     continue
                 elif c == u'〇':
-                    data += '\xF6'
+                    data += pack('B', 0xF6)
                     continue
                 elif c == u'△':
-                    data += '\xF7'
+                    data += pack('B', 0xF7)
                     continue
                 elif c == u'☐':
-                    data += '\xF8'
+                    data += pack('B', 0xF8)
                     continue
                 elif c == u'✕':
-                    data += '\xF9'
+                    data += pack('B', 0xF9)
                     continue
 
             # regular printable character

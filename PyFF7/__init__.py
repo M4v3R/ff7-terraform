@@ -13,17 +13,6 @@ MAX_UNSIGNED_INT = 4294967295
 NULL_BYTE = b'\x00'
 NULL_STR = NULL_BYTE.decode()
 
-# simple file selection prompt using Tkinter
-def file_prompt():
-    try:
-        from Tkinter import Tk
-        from tkFileDialog import askopenfilename
-    except:
-        from tkinter import Tk
-        from tkinter.filedialog import askopenfilename
-    Tk().withdraw()
-    return askopenfilename()
-
 # item database
 ITEM_DB = {
     (0x00, 0): "Potion",

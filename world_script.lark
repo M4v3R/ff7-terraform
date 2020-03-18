@@ -50,15 +50,17 @@ arguments: expr ("," expr)*
              | compare_expr "<=" addsub_expr  -> expr_le
              | compare_expr ">=" addsub_expr  -> expr_ge
              | compare_expr "==" addsub_expr   -> expr_eq
-             | compare_expr "<>" addsub_expr   -> expr_ne
 
 ?addsub_expr: muldiv_expr
             | addsub_expr "+" muldiv_expr  -> expr_add
             | addsub_expr "-" muldiv_expr  -> expr_sub
+            | addsub_expr ">>" muldiv_expr  -> expr_shr
+            | addsub_expr "<<" muldiv_expr  -> expr_shl
+            | addsub_expr "&" muldiv_expr  -> expr_and
+            | addsub_expr "|" muldiv_expr  -> expr_or
 
 ?muldiv_expr: unary_expr
             | muldiv_expr "*" unary_expr  -> expr_mul
-            | muldiv_expr "/" unary_expr  -> expr_div
 
 ?unary_expr: value
            | opcode

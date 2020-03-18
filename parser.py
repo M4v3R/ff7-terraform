@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from sys import exit
 from os import walk
 from os.path import isfile, isdir
 

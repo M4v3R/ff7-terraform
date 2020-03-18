@@ -8,7 +8,7 @@ by Maciej "mav" Trebacz
 
 import struct
 import re
-from sys import argv
+from sys import argv, exit
 from os import makedirs
 from os.path import isdir, isfile
 

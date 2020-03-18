@@ -19,6 +19,7 @@ class CompilerTest(TestCase):
 
     def test_simple_func(self):
         CompilerTest.assert_compiled('PlayLayerAnimation(0x06)', '1001 0600 4a03')
+        CompilerTest.assert_compiled('SetEntityAltitudeOffset(-400)', '1001 9001 1500 0b03')
 
     def test_nested_func(self):
         CompilerTest.assert_compiled('WriteTo(TempByte(2), SpecialByte(15))', '1901 0200 1b01 0f00 e000')

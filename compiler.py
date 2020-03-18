@@ -41,7 +41,7 @@ class Compiler:
     def emit_expression(self, item):
         expressions = {
             'expr_lt': 0x60, 'expr_gt': 0x61, 'expr_le': 0x62,'expr_ge': 0x63, 'expr_eq': 0x70,
-            'expr_add': 0x40, 'expr_sub': 0x41, 'expr_mul': 0x30,
+            'expr_neg': 0x15, 'expr_add': 0x40, 'expr_sub': 0x41, 'expr_mul': 0x30,
             'expr_shl': 0x50, 'expr_shr': 0x51, 'expr_and': 0x80, 'expr_or': 0xa0,
         }
         opcode = OPCODES[expressions[item.data]]

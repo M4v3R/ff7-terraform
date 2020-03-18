@@ -65,7 +65,7 @@ arguments: expr ("," expr)*
 ?unary_expr: value
            | opcode
            | variable
-           | "-" expr      -> negation
+           | "-" expr      -> expr_neg
            | "(" expr ")"
 
 value: NUMERIC_LITERAL

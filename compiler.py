@@ -6,7 +6,7 @@ from constants import OPCODES, SPECIAL_VARS, SAVEMAP_VARS, MODELS
 
 
 class Compiler:
-    def __init__(self, file):
+    def __init__(self, file, offset = 0):
         super(Compiler, self).__init__()
         self.out = bytearray()
         self.opcodes = {**{v[0]: (k, v[1], v[2]) for k, v in OPCODES.items() if v}}
@@ -14,8 +14,11 @@ class Compiler:
                           **{v: k for k, v in SAVEMAP_VARS.items() if v},
                           **{v: k for k, v in MODELS.items() if v}}
         self.file = file
+        self.offset = offset
         self.pos = 0
         self.stack = []
+        self.jumps = []
+        self.labels = []
 
     def error(self, msg):
         error(msg)
@@ -23,7 +26,7 @@ class Compiler:
 
     def emit(self, value):
         self.out += pack('<H', value)
-        self.pos += 2
+        self.pos += 1
 
     def emit_value(self, value):
         if isinstance(value, Token) and not str(value).isdecimal():
@@ -48,6 +51,12 @@ class Compiler:
         self.opcode(opcode[0], item)
 
     def opcode(self, opcode, args):
+        if self.opcodes[opcode][0] == 0x204:  # RunModelFunction:
+            value = args.children.pop()
+            self.compile_tree(args.children, opcode)
+            self.emit(0x204 + int(value.children[0]))
+            return
+
         self.compile_tree(args.children, opcode)
         self.emit_opcode(opcode)
         if self.opcodes[opcode][0] == 0x114:  # SavemapBit
@@ -66,24 +75,41 @@ class Compiler:
                 self.emit_opcode('Return')
             elif item == 'EndIf':
                 pass  # Mark end of if
+            elif isinstance(item, Token) and item[0] == '#':
+                continue
             elif item.data == 'if_stmt':
                 pass  # Same as Opcode
             elif item.data == 'goto_stmt':
-                pass  # GoTo children[0]
+                self.emit_opcode(OPCODES[0x200][0])
+                self.jumps.append((self.pos, 'label', int(item.children[0])))
+                self.emit_value(0xCDAB)  # Placeholder value
             elif item.data == 'label':
-                pass  # Label children[0]
+                self.labels.append((self.pos, 'label', int(item.children[0])))
             elif len(item.data) > 4 and item.data[:5] == 'expr_':
                 self.emit_expression(item)
-            elif item.data == 'value':
+            elif item.data == 'value' or item.data == 'variable':
                 if parent and self.opcodes[parent][2] > 0:
                     continue
 
-                self.emit_opcode('Value')
+                self.emit_opcode(OPCODES[0x110][0])
                 self.emit_value(item.children[0])
             elif item.data == 'opcode':
                 opcode = item.children[0]
                 args = item.children[1]
                 self.opcode(opcode, args)
+
+    def apply_jumps(self):
+        for jump in self.jumps:
+            label = None
+            for l in self.labels:
+                if l[1] == jump[1] and l[2] == jump[2]:
+                    label = l
+            if label is None:
+                self.error("Label #%d not found" % jump[2])
+
+            value = pack('<H', label[0] + self.offset)
+            self.out[jump[0] * 2] = value[0]
+            self.out[jump[0] * 2 + 1] = value[1]
 
     def compile(self):
         with open('world_script.lark') as f:
@@ -93,5 +119,6 @@ class Compiler:
         tree = parser.parse(self.file.read())
         print(tree.pretty())
         self.compile_tree(tree.children)
+        self.apply_jumps()
 
         return self.out

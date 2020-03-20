@@ -24,6 +24,7 @@ TEMP_DIR = "temp"
 VERSION = "1.0"
 VALUE_PREFIX = ""
 verbose = False
+messages = []
 
 USAGE = "USAGE:\n\
 * Extract scripts:  %s extract <world lgp file>\n\
@@ -74,8 +75,8 @@ def dump_functions(functions, directory):
                     outfile.write(text + "\n")
 
                 # Skip noisy ResetStack opcodes
-                # if opcode[0] == OPCODES[0x100][0]:
-                #     continue
+                if opcode[0] == OPCODES[0x100][0]:
+                    continue
 
                 if opcode[0] == 'If':
                     text = f"{indent}If {opcode[1][0]} Then"
@@ -87,6 +88,11 @@ def dump_functions(functions, directory):
                     text = f"{indent}GoTo @{opcode[1][0]}"
                 else:
                     text = f"{indent}{opcode[0]}({', '.join(opcode[1])})"
+                    if opcode[0] == 'SetWindowMessage':
+                        mess = messages[int(opcode[1][0])].replace("\n", " ")
+                        if len(mess) > 50:
+                            mess = mess[:50] + ' ...'
+                        text += ' # ' + mess
 
                 if verbose and opcode[4] is not None:
                     hex_text = ''
@@ -144,11 +150,13 @@ def read_functions(index, code):
             words = [word]
             pos += 1
 
-            if not word in OPCODES:
+            if 0x204 <= word < 0x300:
+                opcode = OPCODES[0x204]
+            elif word not in OPCODES:
                 opcodes.append(("Unknown%04x" % word, [], pos - 1, indent, words))
                 continue
-
-            opcode = OPCODES[word]
+            else:
+                opcode = OPCODES[word]
 
             # Stack arguments
             if opcode[1] > 0:
@@ -264,6 +272,8 @@ def read_functions(index, code):
 
                     pos += 1
 
+            if opcode == OPCODES[0x204]:
+                params.append(str(word - 0x204))
             opcodes.append((opcode[0], params, pos - 1 - opcode[2], indent, words))
 
             # De-indent when a jump was made here
@@ -325,7 +335,6 @@ def read_index(script):
 
 def read_messages(data):
     num_entries = read_word(data, 0)
-    messages = []
 
     for i in range(0, num_entries):
         offset = read_word(data, 1 + i)
@@ -405,14 +414,14 @@ def extract_world(lgp_file):
         if e[0] == 'mes' or e[0] == '/mes':
             messages_file = e
 
-    for i in range(0, 3):
-        extract_scripts(scripts[i])
-
     if not messages_file:
         error("Messages file 'mes' not found inside %s!" % lgp_file)
         exit(1)
 
     extract_messages(messages_file)
+
+    for i in range(0, 3):
+        extract_scripts(scripts[i])
 
 
 if __name__ == "__main__":

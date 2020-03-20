@@ -21,18 +21,32 @@ class CompilerTest(TestCase):
         CompilerTest.assert_compiled('PlayLayerAnimation(0x06)', '1001 0600 4a03')
         CompilerTest.assert_compiled('SetEntityAltitudeOffset(-400)', '1001 9001 1500 0b03')
 
+    def test_comment(self):
+        CompilerTest.assert_compiled('LoadModel(0) # loads a model', '1001 0000 0003')
+
     def test_nested_func(self):
         CompilerTest.assert_compiled('WriteTo(TempByte(2), SpecialByte(15))', '1901 0200 1b01 0f00 e000')
+
+    def test_model_func(self):
+        CompilerTest.assert_compiled('RunModelFunction($Highwind, 20)', '1001 0300 1802')
+        CompilerTest.assert_compiled('RunModelFunction(SpecialByte($PlayerEntityModelId), 29)', '1b01 0800 2102')
 
     def test_constants(self):
         CompilerTest.assert_compiled('SetEntityDirection(SpecialByte($EntityDirection) + 128)',
                                      '1b01 0400 1001 8000 4000 0403')
 
+    def test_goto(self):
+        CompilerTest.assert_compiled('LoadModel(0)\n@LABEL_1\nLoadModel(1)\nGoTo @LABEL_1',
+                                     '1001 0000 0003 1001 0100 0003 0002 0300')
+
     def test_savemap_and_math(self):
         CompilerTest.assert_compiled('WriteTo(SavemapBit(0x0F29, 3), 1)', '1401 2b1c 1001 0100 e000')
-        CompilerTest.assert_compiled('WriteTo(SavemapByte(0x0C14), SavemapByte(0x0C14) - 1)', '1801 8003 1801 8003 1001 0100 4100 e000')
-        CompilerTest.assert_compiled('SetEntityAltitudeOffset(SavemapWord(0x0C16) - 3685 >> 1)', '1c01 9003 1001 650e 4100 1001 0100 5100 0b03')
-        CompilerTest.assert_compiled('WriteTo(TempByte(0), SpecialByte($Random8BitNumber) * 9 >> 8)', '1901 0000 1b01 1000 1001 0900 3000 1001 0800 5100 e000')
+        CompilerTest.assert_compiled('WriteTo(SavemapByte(0x0C14), SavemapByte(0x0C14) - 1)',
+                                     '1801 8003 1801 8003 1001 0100 4100 e000')
+        CompilerTest.assert_compiled('SetEntityAltitudeOffset(SavemapWord(0x0C16) - 3685 >> 1)',
+                                     '1c01 9003 1001 650e 4100 1001 0100 5100 0b03')
+        CompilerTest.assert_compiled('WriteTo(TempByte(0), SpecialByte($Random8BitNumber) * 9 >> 8)',
+                                     '1901 0000 1b01 1000 1001 0900 3000 1001 0800 5100 e000')
 
 
     # def test_simple_value(self):

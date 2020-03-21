@@ -9,7 +9,7 @@ class Compiler:
     def __init__(self, file, offset = 0):
         super(Compiler, self).__init__()
         self.out = bytearray()
-        self.opcodes = {**{v[0]: (k, v[1], v[2]) for k, v in OPCODES.items() if v}}
+        self.opcodes = {**{v[0]: (k, v[1], v[2], v[3]) for k, v in OPCODES.items() if v}}
         self.constants = {**{v: k for k, v in SPECIAL_VARS.items() if v},
                           **{v: k for k, v in SAVEMAP_VARS.items() if v},
                           **{v: k for k, v in MODELS.items() if v}}
@@ -19,6 +19,8 @@ class Compiler:
         self.stack = []
         self.jumps = []
         self.labels = []
+        self.emit_reset = False
+        self.ifs = []
 
     def error(self, msg):
         error(msg)
@@ -28,18 +30,23 @@ class Compiler:
         self.out += pack('<H', value)
         self.pos += 1
 
-    def emit_value(self, value):
+    def parse_value(self, value):
         if isinstance(value, Token) and not str(value).isdecimal():
             if len(value) > 2 and value[:2] == '0x':
-                self.emit(int(value, 0))
+                return int(value, 0)
             elif str(value) in self.constants:
-                self.emit(int(self.constants[str(value)]))
+                return int(self.constants[str(value)])
         else:
-            self.emit(int(value))
+            return int(value)
+
+    def emit_value(self, value):
+        self.emit(self.parse_value(value))
 
     def emit_opcode(self, opcode):
         opcode = self.opcodes[opcode]
         self.emit(opcode[0])
+        if opcode[3]:
+            self.emit_reset = True
 
     def emit_expression(self, item):
         expressions = {
@@ -60,25 +67,39 @@ class Compiler:
         self.compile_tree(args.children, opcode)
         self.emit_opcode(opcode)
         if self.opcodes[opcode][0] == 0x114:  # SavemapBit
-            address = int(args.children[0].children[0], 0)
+            address = self.parse_value(args.children[0].children[0])
             bit = int(args.children[1].children[0], 0)
             self.emit_value((address - 0xBA4) * 8 + bit)
         elif self.opcodes[opcode][0] in [0x118, 0x11c]:  # SavemapByte/SavemapWord
-            address = int(args.children[0].children[0], 0)
+            address = self.parse_value(args.children[0].children[0])
             self.emit_value((address - 0xBA4) * 8)
+        elif self.opcodes[opcode][0] == 0x201:  # If
+            self.ifs.append(self.pos)
+            self.emit_value(0xCDAB)  # Placeholder value
         elif self.opcodes[opcode][2] > 0:
             self.emit_value(args.children[0].children[0])
 
-    def compile_tree(self, tree, parent = None):
+    def compile_tree(self, tree, parent: str = None):
         for item in tree:
+            if self.emit_reset and parent is None and item not in ['End', 'EndIf'] \
+                    and not isinstance(item, Token) and item.data != 'label':
+                self.emit_opcode(OPCODES[0x100][0])
+                self.emit_reset = False
+
             if item == 'End':
                 self.emit_opcode('Return')
             elif item == 'EndIf':
-                pass  # Mark end of if
+                if len(self.ifs) == 0:
+                    self.error("Unexpected token: EndIf")
+
+                pos = self.ifs.pop()
+                self.jumps.append((pos, 'if', pos))
+                self.labels.append((self.pos, 'if', pos))
             elif isinstance(item, Token) and item[0] == '#':
                 continue
             elif item.data == 'if_stmt':
-                pass  # Same as Opcode
+                opcode = OPCODES[0x201][0]
+                self.opcode(opcode, item)
             elif item.data == 'goto_stmt':
                 self.emit_opcode(OPCODES[0x200][0])
                 self.jumps.append((self.pos, 'label', int(item.children[0])))
@@ -104,6 +125,7 @@ class Compiler:
             for l in self.labels:
                 if l[1] == jump[1] and l[2] == jump[2]:
                     label = l
+                    break
             if label is None:
                 self.error("Label #%d not found" % jump[2])
 
@@ -117,7 +139,6 @@ class Compiler:
 
         parser = Lark(grammar, start='program', parser='lalr', lexer='standard')
         tree = parser.parse(self.file.read())
-        print(tree.pretty())
         self.compile_tree(tree.children)
         self.apply_jumps()
 

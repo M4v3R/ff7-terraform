@@ -17,7 +17,7 @@ from PyFF7.text import decode_field_text
 
 from constants import *
 from parser import Parser
-from utils import error, log, read_word, write_word
+from utils import error, log, read_word
 
 OUTPUT_DIR = "output"
 TEMP_DIR = "temp"
@@ -121,21 +121,23 @@ def dump_messages(messages, filename):
 
 def read_functions(index, code):
     functions = []
+    file_id = 0
     for entry in index:
 
         # System Functions
-        name = f'system_%02d' % entry[2]
+        name = f'%03d_system_%02d' % (file_id, entry[2])
 
         # Model Functions
         if entry[0] == FUNCTION_MODEL:
-            name = 'model_%02d_%02d' % (entry[3], entry[2])
+            name = '%03d_model_%02d_%02d' % (file_id, entry[3], entry[2])
 
         # Mesh Functions
         elif entry[0] == FUNCTION_MESH:
             x = entry[2] / 36
             z = entry[2] % 36
-            name = 'mesh_%02d_%02d_%d' % (x, z, entry[3])
+            name = '%03d_mesh_%02d_%02d_%d' % (file_id, x, z, entry[3])
 
+        file_id += 1
         opcode = (0,)
         opcodes = []
         pos = entry[1]

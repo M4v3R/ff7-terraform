@@ -7,9 +7,9 @@ from lark import Lark
 
 class CompilerTest(TestCase):
     @staticmethod
-    def assert_compiled(input, output):
+    def assert_compiled(input, output, offset: int = 0):
         file_mock = StringIO(input)
-        compiler = Compiler(file_mock)
+        compiler = Compiler(file_mock, offset)
         compiled = bytes(compiler.compile()).hex()
         expected = output.replace(' ', '')
         assert compiled == expected, 'Actual output doesn\'t match expected output:\n'
@@ -36,8 +36,12 @@ class CompilerTest(TestCase):
                                      '1b01 0400 1001 8000 4000 0403')
 
     def test_goto(self):
+        CompilerTest.assert_compiled('@LABEL_1\nLoadModel(0)\nGoTo @LABEL_1',
+                                     '1001 0000 0003 0001 0002 0000')
         CompilerTest.assert_compiled('LoadModel(0)\n@LABEL_1\nLoadModel(1)\nGoTo @LABEL_1',
-                                     '1001 0000 0003 1001 0100 0003 0002 0300')
+                                     '1001 0000 0003 0001 1001 0100 0003 0001 0002 0300')
+        CompilerTest.assert_compiled('GoTo @LABEL_1\nLoadModel(0)\n@LABEL_1\nLoadModel(1)',
+                                     '0002 0600 0001 1001 0000 0003 0001 1001 0100 0003')
 
     def test_savemap_and_math(self):
         CompilerTest.assert_compiled('WriteTo(SavemapBit(0x0F29, 3), 1)', '1401 2b1c 1001 0100 e000')
@@ -48,17 +52,41 @@ class CompilerTest(TestCase):
         CompilerTest.assert_compiled('WriteTo(TempByte(0), SpecialByte($Random8BitNumber) * 9 >> 8)',
                                      '1901 0000 1b01 1000 1001 0900 3000 1001 0800 5100 e000')
 
+    def test_conditions(self):
+        CompilerTest.assert_compiled('If GetDistanceToModel($GoldSaucer) <= 100 Then\nUnknown30d()\nEndIf',
+                                     '1001 0e00 1900 1001 6400 6200 0102 0a00 0001 0d03')
+        CompilerTest.assert_compiled('If SavemapWord($GameProgress) == 1596 Then\n'
+                                     'If GetDistanceToPoint(9) <= 256 Then\n'
+                                     '  EnterFieldLevel(52, 0)\n'
+                                     'EndIf\nEndIf\nLoadModel(0)\nEnd',
+                                     '1c01 0000 1001 3c06 7000 0102 1600 0001 1001 0900 1800 1001 0001 6200 0102 '
+                                     '1600 0001 1001 3400 1001 0000 1803 0001 1001 0000 0003 0302')
 
-    # def test_simple_value(self):
-    #     CompilerTest.assert_compiled('6', '1001 0600')
-    #
-    # def test_simple_math_operations(self):
-    #     CompilerTest.assert_compiled('1 + 4', '1001 0100 1001 0400 4000')
-    #     CompilerTest.assert_compiled('5 - 3', '1001 0500 1001 0300 4100')
-    #     CompilerTest.assert_compiled('2 * 8', '1001 0200 1001 0800 3000')
-    #
-    # def test_parenthesis_math(self):
-    #     CompilerTest.assert_compiled('2 * (3 + 4)', '1001 0400 1001 0300 4000 1001 0200 3000')
+    def test_reset(self):
+        CompilerTest.assert_compiled('If SavemapByte(0x0C15) < 5 Then\n'
+                                     '  PlaySound(433)\n'
+                                     'EndIf\n'
+                                     'PlaySound(434)\n'
+                                     'End',
+                                     '1801 8803 1001 0500 6000 0102 0b00 0001 1001 b101 1d03 0001 1001 b201 1d03 0302')
+
+    def test_complex(self):
+        CompilerTest.assert_compiled('''
+            If SpecialByte($PlayerEntityModelId) == $Buggy Then
+              If Not(SavemapBit($YuffieFlags, 1)) Then
+                PlayerControlsEnabled(0)
+                RunModelFunction($Buggy, 18)
+                GoTo @LABEL_1
+              EndIf
+              If Not(SavemapBit($YuffieFlags, 2)) Then
+                PlayerControlsEnabled(0)
+                RunModelFunction($Buggy, 18)
+              EndIf
+            EndIf
+            @LABEL_1
+            End''', '1b01 0800 1001 0600 7000 0102 622a 0001 1401 790e 1700 0102 542a 0001 1001 0000 0703 0001 '
+                    '1001 0600 1602 0002 622a 0001 1401 7a0e 1700 0102 622a 0001 1001 0000 0703 0001 '
+                    '1001 0600 1602 0302', 0x2a3d)
 
 
 class ParserTest(TestCase):
@@ -69,7 +97,7 @@ class ParserTest(TestCase):
 
         parser = Lark(grammar, start='program', parser='lalr', lexer='standard')
         t = parser.parse(prog)
-        print(t.pretty())
+        # print(t.pretty())
         return t.children
 
     def test_end(self):
@@ -110,7 +138,7 @@ class ParserTest(TestCase):
         assert lines[0].children[1].children[0].children[0] == '123'
         assert len(lines[1].children[1].children) == 2
         assert lines[1].children[1].children[1].children[0] == '6'
-        assert lines[2].children[1].children[0].data == 'negation'
+        assert lines[2].children[1].children[0].data == 'expr_neg'
         assert lines[2].children[1].children[0].children[0].data == 'value'
         assert lines[2].children[1].children[0].children[0].children[0] == '256'
 

@@ -7,6 +7,7 @@ from os.path import isfile, isdir
 from PyFF7.text import encode_text
 from compiler import Compiler
 from utils import log, error, write_word, write_bytes
+from constants import *
 
 
 class Parser(object):
@@ -82,7 +83,7 @@ class Parser(object):
             for filename in files:
                 with open(directory + '/' + filename) as file:
                     compiler = Compiler(file)
-                    functions.append(compiler.compile())
+                    functions.append((filename, compiler.compile()))
 
             self.scripts.append((script, functions))
 
@@ -107,5 +108,38 @@ class Parser(object):
         with open(filename, 'wb') as file:
             file.write(data)
 
+    def write_scripts(self, directory):
+        for script, functions in self.scripts:
+            filename = directory + '/' + script
+            data = bytearray(0x7000)
+            pos = 2
+            offset = 0
+            for name, code in functions:
+                function = name[:name.index(".")].split("_")
+                if function[1] == 'system':
+                    ident = int(function[2])
+                elif function[1] == 'model':
+                    ident = int(function[3]) | int(function[2]) << 8 | 0x4000
+                else:
+                    x = int(function[2])
+                    z = int(function[3])
+                    type = int(function[4])
+                    coords = x * 36 + z
+                    ident = type | coords << 4 | 0x8000
+
+                write_word(data, pos, ident)
+                write_word(data, pos + 1, offset)
+                write_bytes(data, 0x400 + offset, code)
+                pos += 2
+                offset += int(len(code) / 2)
+            while pos < 0x200:
+                write_word(data, pos, 0xFFFF)
+                write_word(data, pos + 1, 0)
+                pos += 2
+            with open(filename, 'wb') as file:
+                file.write(data)
+
+
     def write_files(self, directory):
         self.write_messages(directory)
+        self.write_scripts(directory)

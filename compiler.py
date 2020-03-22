@@ -69,7 +69,7 @@ class Compiler:
             self.emit_value((address - 0xBA4) * 8 + bit)
         elif self.opcodes[opcode][0] in [0x118, 0x11c]:  # SavemapByte/SavemapWord
             address = self.parse_value(args.children[0].children[0])
-            self.emit_value((address - 0xBA4) * 8)
+            self.emit_value(address - 0xBA4)
         elif self.opcodes[opcode][0] == 0x201:  # If
             self.ifs.append(self.pos)
             self.emit_value(0xCDAB)  # Placeholder value

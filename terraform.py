@@ -248,7 +248,7 @@ def read_functions(index, code):
                         params.append(str(bit))
 
                     elif opcode[0] in [OPCODES[0x118][0], OPCODES[0x11c][0]]:  # SavemapByte or SavemapWord
-                        byte = int(word / 8) + 0xBA4
+                        byte = word + 0xBA4
                         if byte in SAVEMAP_VARS:
                             params.append("$" + SAVEMAP_VARS[byte])
                         else:

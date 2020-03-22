@@ -80,8 +80,8 @@ class Parser(object):
 
                 files.sort()
 
+            offset = 1
             for filename in files:
-                offset = 1
                 with open(directory + '/' + filename) as file:
                     compiler = Compiler(file, offset)
                     code = compiler.compile()

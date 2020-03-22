@@ -81,9 +81,12 @@ class Parser(object):
                 files.sort()
 
             for filename in files:
+                offset = 1
                 with open(directory + '/' + filename) as file:
-                    compiler = Compiler(file)
-                    functions.append((filename, compiler.compile()))
+                    compiler = Compiler(file, offset)
+                    code = compiler.compile()
+                    offset += int(len(code) / 2)
+                    functions.append((filename, code))
 
             self.scripts.append((script, functions))
 
@@ -102,7 +105,7 @@ class Parser(object):
         offset = 2 + num_entries * 2
         for i in range(0, num_entries):
             write_word(data, i + 1, offset)
-            write_bytes(data, offset, self.messages[i])
+            write_bytes(data, int(offset / 2), self.messages[i])
             offset += len(self.messages[i])
 
         with open(filename, 'wb') as file:
@@ -112,8 +115,12 @@ class Parser(object):
         for script, functions in self.scripts:
             filename = directory + '/' + script
             data = bytearray(0x7000)
-            pos = 2
-            offset = 0
+            index_pos = 2
+            offset = 1
+
+            # First dummy function
+            write_word(data, 0x200, 0x203)
+
             for name, code in functions:
                 function = name[:name.index(".")].split("_")
                 if function[1] == 'system':
@@ -127,18 +134,20 @@ class Parser(object):
                     coords = x * 36 + z
                     ident = type | coords << 4 | 0x8000
 
-                write_word(data, pos, ident)
-                write_word(data, pos + 1, offset)
-                write_bytes(data, 0x400 + offset, code)
-                pos += 2
+                write_word(data, index_pos, ident)
+                write_word(data, index_pos + 1, offset)
+
+                write_bytes(data, 0x200 + offset, code)
+                index_pos += 2
                 offset += int(len(code) / 2)
-            while pos < 0x200:
-                write_word(data, pos, 0xFFFF)
-                write_word(data, pos + 1, 0)
-                pos += 2
+
+            while index_pos < 0x200:
+                write_word(data, index_pos, 0xFFFF)
+                write_word(data, index_pos + 1, 0)
+                index_pos += 2
+
             with open(filename, 'wb') as file:
                 file.write(data)
-
 
     def write_files(self, directory):
         self.write_messages(directory)

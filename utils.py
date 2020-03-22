@@ -12,7 +12,7 @@ def write_word(data, pos, word):
 
 def write_bytes(data, offset, bytes_to_write):
 	for i in range(len(bytes_to_write)):
-		data[offset + i] = bytes_to_write[i]
+		data[offset * 2 + i] = bytes_to_write[i]
 
 
 def error(text):

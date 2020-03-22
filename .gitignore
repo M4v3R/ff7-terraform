@@ -2,8 +2,8 @@ __pycache__
 .vscode
 .idea
 .venv
-output
+output*
 build
 temp
-world_us.lgp
+world_*.lgp
 dist

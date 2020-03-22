@@ -12,7 +12,7 @@ uses in the World map module from game files, namely - world_*.lgp files.
 It will decompile the worldmap scripts and put each script in a separate file,
 so you can read and edit it.
 
-In future it will let you recompile the world lgp archive based on your changed
+Finally, it will let you recompile the world lgp archive based on your changed
 scripts, so you can modify the game's behavior.
 
 ## Usage
@@ -38,11 +38,11 @@ output\
  -- messages.txt - text messages used by the scripts
 ```
 
-Inside the `*.ev` directories you will find three kinds of files:
+Inside the `*.ev` directories you will find three kinds of files (`N` is the function index number):
 
-* `system_F.s` - system functions, where `F` is the Function ID
-* `model_M_F.s` - model functions, where `M` is the Model ID, and `F` is the Function ID
-* `mesh_X_Z_T.s` - mesh functions, where `X` and `Z` are coordinates, and `T` is the mesh type
+* `N_system_F.s` - system functions, where `F` is the Function ID
+* `N_model_M_F.s` - model functions, where `M` is the Model ID, and `F` is the Function ID
+* `N_mesh_X_Z_T.s` - mesh functions, where `X` and `Z` are coordinates, and `T` is the mesh type
 
 Please keep the directory structure and file naming conventions intact in order
 to be able to recompile this data later.

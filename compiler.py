@@ -1,7 +1,7 @@
 from sys import exit
 from utils import error
-from struct import unpack, pack
-from lark import Lark, Token
+from struct import pack
+from lark import Lark, Token, Tree
 from constants import OPCODES, SPECIAL_VARS, SAVEMAP_VARS, MODELS
 
 
@@ -19,7 +19,6 @@ class Compiler:
         self.stack = []
         self.jumps = []
         self.labels = []
-        self.emit_reset = False
         self.ifs = []
 
     def error(self, msg):
@@ -45,8 +44,6 @@ class Compiler:
     def emit_opcode(self, opcode):
         opcode = self.opcodes[opcode]
         self.emit(opcode[0])
-        if opcode[3]:
-            self.emit_reset = True
 
     def emit_expression(self, item):
         expressions = {
@@ -81,11 +78,6 @@ class Compiler:
 
     def compile_tree(self, tree, parent: str = None):
         for item in tree:
-            if self.emit_reset and parent is None and item not in ['End', 'EndIf'] \
-                    and not isinstance(item, Token) and item.data != 'label':
-                self.emit_opcode(OPCODES[0x100][0])
-                self.emit_reset = False
-
             if item == 'End':
                 self.emit_opcode('Return')
             elif item == 'EndIf':
@@ -95,6 +87,8 @@ class Compiler:
                 pos = self.ifs.pop()
                 self.jumps.append((pos, 'if', pos))
                 self.labels.append((self.pos, 'if', pos))
+            elif item == 'ResetStack':
+                self.emit_opcode(OPCODES[0x100][0])
             elif isinstance(item, Token) and item[0] == '#':
                 continue
             elif item.data == 'if_stmt':
@@ -133,12 +127,26 @@ class Compiler:
             self.out[jump[0] * 2] = value[0]
             self.out[jump[0] * 2 + 1] = value[1]
 
+    def add_resets(self, tree):
+        new_children = []
+        for item in tree.children:
+            if isinstance(item, Tree):
+                if item.data == 'if_stmt':
+                    new_children.append('ResetStack')
+                elif item.data == 'opcode':
+                    opcode = self.opcodes[item.children[0]]
+                    if opcode[1] > 0:
+                        new_children.append('ResetStack')
+            new_children.append(item)
+        tree.children = new_children
+
     def compile(self):
         with open('world_script.lark') as f:
             grammar = f.read()
 
         parser = Lark(grammar, start='program', parser='lalr', lexer='standard')
         tree = parser.parse(self.file.read())
+        self.add_resets(tree)
         self.compile_tree(tree.children)
         self.apply_jumps()
 

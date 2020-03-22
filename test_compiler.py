@@ -62,6 +62,13 @@ class CompilerTest(TestCase):
                                      '1c01 0000 1001 3c06 7000 0102 1600 0001 1001 0900 1800 1001 0001 6200 0102 '
                                      '1600 0001 1001 3400 1001 0000 1803 0001 1001 0000 0003 0302')
 
+    def test_bool_logic(self):
+        CompilerTest.assert_compiled('If SpecialWord($EntityCoordInMeshY) >= 4200 AND SpecialWord($EntityCoordInMeshY) <= 5820 Then\n'
+                                     'SetEntityMeshCoords(26, 24)\n'
+                                     'EndIf',
+                                     '0001 1f01 0300 1001 6810 6300 1f01 0300 1001 bc16 6200 b000 0102 1400'
+                                     '0001 1001 1a00 1001 1800 0803')
+
     def test_reset(self):
         CompilerTest.assert_compiled('If SavemapByte(0x0C15) < 5 Then\n'
                                      '  PlaySound(433)\n'

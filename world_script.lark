@@ -36,13 +36,13 @@ opcode: ID "(" arguments ")"
 arguments: expr ("," expr)*
              |
 
-?expr: or_expr
+?expr: expr_or
 
-?or_expr: and_expr
-        | or_expr _OR_KW and_expr
+?expr_or: expr_and
+        | expr_or _OR_KW expr_and
 
-?and_expr: compare_expr
-         | and_expr _AND_KW compare_expr
+?expr_and: compare_expr
+         | expr_and _AND_KW compare_expr
 
 ?compare_expr: addsub_expr
              | compare_expr "<" addsub_expr   -> expr_lt

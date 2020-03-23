@@ -16,25 +16,25 @@ from PyFF7.lgp import LGP, pack_lgp
 from PyFF7.text import decode_field_text
 
 from constants import *
-from parser import Parser
+from parse import Parser
 from utils import error, log, read_word
 
 OUTPUT_DIR = "output"
 TEMP_DIR = "temp"
-VERSION = "1.0"
+VERSION = "0.9.0"
 VALUE_PREFIX = ""
 verbose = False
 messages = []
 
 USAGE = "USAGE:\n\
-* Extract scripts:  %s extract <world lgp file>\n\
+* Extract scripts: %s extract <world lgp file>\n\
 * Compile scripts: %s compile <input directory> <output lgp file>" % (argv[0], argv[0])
 
 
 def header():
-    print("-------------------------------------------")
+    print("---------------------------------------------")
     print("Terraform v%s - FF7 Worldmap script editor" % VERSION)
-    print("-------------------------------------------\n")
+    print("---------------------------------------------\n")
 
 
 def dump_functions(functions, directory):
@@ -47,6 +47,13 @@ def dump_functions(functions, directory):
     for function in functions:
         name = function[0]
         opcodes = function[1]
+
+        if opcodes is None:
+            with open(directory + '/' + name + '.s', 'w') as outfile:
+                outfile.write('# Dummy function, duplicate of function #' + name[4:7])
+                outfile.close()
+            continue
+
         labels = function[2]
         entry = function[3]
         with open(directory + '/' + name + '.s', 'w') as outfile:
@@ -121,8 +128,10 @@ def dump_messages(messages, filename):
 
 def read_functions(index, code):
     functions = []
+    offsets = {}
     file_id = 0
     for entry in index:
+        pos = entry[1]
 
         # System Functions
         name = f'%03d_system_%02d' % (file_id, entry[2])
@@ -137,13 +146,20 @@ def read_functions(index, code):
             z = entry[2] % 36
             name = '%03d_mesh_%02d_%02d_%d' % (file_id, x, z, entry[3])
 
-        file_id += 1
         opcode = (0,)
         opcodes = []
-        pos = entry[1]
         indent = 0
         jumps = []
         labels = []
+
+        if pos not in offsets:
+            offsets[pos] = file_id
+        else:
+            functions.append((name[:3] + ('-%03d' % offsets[pos]) + name[3:], None))
+            file_id += 1
+            continue
+
+        file_id += 1
 
         # Read the code until we reach Return opcode
         while opcode[0] != OPCODES[0x203][0]:
@@ -332,6 +348,8 @@ def read_index(script):
             error("Invalid function type: %d" % function_type)
             continue
 
+    # sorted_index = sorted(index, key=lambda item: item[1])
+    # return sorted_index
     return index
 
 
@@ -357,7 +375,6 @@ def extract_scripts(file):
 
 
 def extract_messages(file):
-    filename = file[0]
     data = file[1]
     messages = read_messages(data)
 

@@ -7,7 +7,6 @@ from os.path import isfile, isdir
 from PyFF7.text import encode_text
 from compiler import Compiler
 from utils import log, error, write_word, write_bytes
-from constants import *
 
 
 class Parser(object):
@@ -105,7 +104,7 @@ class Parser(object):
         offset = 2 + num_entries * 2
         for i in range(0, num_entries):
             write_word(data, i + 1, offset)
-            write_bytes(data, int(offset / 2), self.messages[i])
+            write_bytes(data, offset, self.messages[i])
             offset += len(self.messages[i])
 
         with open(filename, 'wb') as file:
@@ -117,6 +116,7 @@ class Parser(object):
             data = bytearray(0x7000)
             index_pos = 2
             offset = 1
+            offsets = {}
 
             # First dummy function
             write_word(data, 0x200, 0x203)
@@ -135,9 +135,16 @@ class Parser(object):
                     ident = type | coords << 4 | 0x8000
 
                 write_word(data, index_pos, ident)
-                write_word(data, index_pos + 1, offset)
+                if len(function[0]) > 3:
+                    ids = function[0].split("-")
+                    write_word(data, index_pos + 1, offsets[ids[1]])
+                    index_pos += 2
+                    continue
+                else:
+                    offsets[function[0]] = offset
 
-                write_bytes(data, 0x200 + offset, code)
+                write_word(data, index_pos + 1, offset)
+                write_bytes(data, 0x400 + offset * 2, code)
                 index_pos += 2
                 offset += int(len(code) / 2)
 

@@ -21,7 +21,7 @@ from utils import error, log, read_word
 
 OUTPUT_DIR = "output"
 TEMP_DIR = "temp"
-VERSION = "0.9.0"
+VERSION = "0.9.1"
 VALUE_PREFIX = ""
 verbose = False
 messages = []
@@ -192,9 +192,23 @@ def read_functions(index, code):
                         else:
                             params.append(last_param)
 
+                    # If current opcode is 'IsEqual', and its param is a SpecialByte($LastFieldID)
+                    # adjust the second param with a constant for better readibility
+                    if opcode[0] == OPCODES[0x70][0] and op[1][0] == '$' + SPECIAL_VARS['6'] and \
+                            op[0] == OPCODES[0x11b][0]:
+                        last_param = params.pop()
+                        if (VALUE_PREFIX == '' or last_param[0] == VALUE_PREFIX) and last_param[len(VALUE_PREFIX):] in FIELD_IDS:
+                            params.append(f"{VALUE_PREFIX}${FIELD_IDS[last_param[len(VALUE_PREFIX):]]}")
+                        else:
+                            params.append(last_param)
+
                     # Replace constant values with Model constants wherever possible
                     if word in MODEL_OPCODES and op[0] == OPCODES[0x110][0] and str(op[1][0]) in MODELS:
                         params.append(f"{VALUE_PREFIX}${MODELS[str(op[1][0])]}")
+
+                    # Replace constant values with Field IDs constants wherever possible
+                    elif op[0] == OPCODES[0x110][0] and word == 0x318 and i == 1 and str(op[1][0]) in FIELD_IDS:
+                        params.append(f"{VALUE_PREFIX}${FIELD_IDS[str(op[1][0])]}")
 
                     elif op[0] == OPCODES[0x015][0]: # Neg
                         params.append(f"-{op[1][0]}")

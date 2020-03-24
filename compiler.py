@@ -2,7 +2,7 @@ from sys import exit
 from utils import error
 from struct import pack
 from lark import Lark, Token, Tree
-from constants import OPCODES, SPECIAL_VARS, SAVEMAP_VARS, MODELS
+from constants import OPCODES, SPECIAL_VARS, SAVEMAP_VARS, FIELD_IDS, MODELS
 
 
 class Compiler:
@@ -12,6 +12,7 @@ class Compiler:
         self.opcodes = {**{v[0]: (k, v[1], v[2], v[3]) for k, v in OPCODES.items() if v}}
         self.constants = {**{v: k for k, v in SPECIAL_VARS.items() if v},
                           **{v: k for k, v in SAVEMAP_VARS.items() if v},
+                          **{v: k for k, v in FIELD_IDS.items() if v},
                           **{v: k for k, v in MODELS.items() if v}}
         self.file = file
         self.offset = offset

@@ -1,7 +1,7 @@
 # Terraform - World Map script editor for Final Fantasy VII
 
 Author: mav  
-Version: 0.9.0 / 23.03.2020  
+Version: 0.9.1 / 24.03.2020  
 License: GPL v3  
 
 ## What it is

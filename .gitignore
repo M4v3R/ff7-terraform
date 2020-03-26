@@ -7,3 +7,5 @@ build
 temp
 world_*.lgp
 dist
+
+venv/

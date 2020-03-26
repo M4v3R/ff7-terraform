@@ -24,7 +24,7 @@ def comnpile_clicked():
 
 
 def dump_clicked():
-    extract_world(wm_path.get())
+    extract_world(wm_path.get(), True)
 
 
 window = Tk()

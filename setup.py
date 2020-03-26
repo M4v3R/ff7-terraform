@@ -1,8 +1,11 @@
 import sys
 from cx_Freeze import setup, Executable
 
+includefiles = ['world_script.lark']
+
 # Dependencies are automatically detected, but it might need fine tuning.
-build_exe_options = {"packages": ["os"]}
+build_exe_options = {"packages": ["os", "lark"],
+                     "include_files": includefiles}
 
 # GUI applications require a different base on Windows (the default is for a
 # console application).

@@ -1,3 +1,6 @@
+OUTPUT_DIR = "output"
+TEMP_DIR = "temp"
+
 # Script opcodes, contains also information about number of stack
 # parameters and code parameters
 # More info: 

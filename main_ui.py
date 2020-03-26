@@ -46,7 +46,7 @@ wm_path_entry.grid(column=1, row=1)
 dump_btn = Button(window, text="Dump", width=8, command=dump_clicked)
 dump_btn.grid(column=2, row=1)
 
-open_dump_btn = Button(window, text="open", width=8, command=open_files_clicked())
+open_dump_btn = Button(window, text="open", width=8, command=open_files_clicked)
 open_dump_btn.grid(column=0, row=2)
 
 files_path_entry = Entry(window, width=40, textvariable=files_path)

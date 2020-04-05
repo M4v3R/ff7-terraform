@@ -4,11 +4,11 @@ program: _nl? _part*
 
 _part: _line _nl?
 
-_nl: _NEWLINE+
+_nl: newline+
 
 _line: label | stmt
 
-_NEWLINE: "\n"
+newline: "\n"
         | "\r\n"
         | "\r"
 
@@ -18,7 +18,7 @@ STRING_LITERAL: /"[^"]*"/
 
 ID: /[a-z_][a-z0-9]*/i
 
-COMMENT: /# /i /[^\n]/i*
+COMMENT: /#/i /[^\n]/i*
 
 label: _LABEL_KW NUMERIC_LITERAL
 

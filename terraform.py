@@ -17,7 +17,7 @@ from utils import error, log
 from PyFF7.lgp import LGP, pack_lgp
 from constants import *
 
-VERSION = "0.9.1"
+VERSION = "0.9.2"
 
 USAGE = "USAGE:\n\
 * Extract scripts: %s extract <world lgp file>\n\

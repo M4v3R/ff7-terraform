@@ -21,9 +21,10 @@ class Compiler:
         self.jumps = []
         self.labels = []
         self.ifs = []
+        self.line = 0
 
     def error(self, msg):
-        error(msg + ' while parsing ' + self.file.name)
+        error(msg + ' while parsing ' + self.file.name + ' on line ' + str(self.line))
         exit(1)
 
     def emit(self, value):
@@ -78,12 +79,15 @@ class Compiler:
             self.emit_value(args.children[0].children[0])
 
     def compile_tree(self, tree, parent: str = None):
-        for item in tree:
+        for index, item in enumerate(tree):
+            if parent is None and item != 'ResetStack':
+                self.line += 1
+
             if item == 'End':
                 self.emit_opcode('Return')
             elif item == 'EndIf':
                 if len(self.ifs) == 0:
-                    self.error("Unexpected token: EndIf")
+                    self.error("EndIf without a matching If")
 
                 pos = self.ifs.pop()
                 self.jumps.append((pos, 'if', pos))
@@ -91,6 +95,11 @@ class Compiler:
             elif item == 'ResetStack':
                 self.emit_opcode(OPCODES[0x100][0])
             elif isinstance(item, Token) and item[0] == '#':
+                continue
+            elif item.data == 'newline':
+                if index == 0 or not isinstance(tree[index - 1], Tree) or tree[index - 1].data != 'newline':
+                    self.line -= 1
+
                 continue
             elif item.data == 'if_stmt':
                 opcode = OPCODES[0x201][0]
@@ -112,6 +121,9 @@ class Compiler:
             elif item.data == 'opcode':
                 opcode = item.children[0]
                 args = item.children[1]
+                if not opcode in self.opcodes:
+                    self.error('Unknown opcode: ' + opcode)
+
                 self.opcode(opcode, args)
 
     def apply_jumps(self):
@@ -135,9 +147,10 @@ class Compiler:
                 if item.data == 'if_stmt':
                     new_children.append('ResetStack')
                 elif item.data == 'opcode':
-                    opcode = self.opcodes[item.children[0]]
-                    if opcode[1] > 0:
-                        new_children.append('ResetStack')
+                    if item.children[0] in self.opcodes:
+                        opcode = self.opcodes[item.children[0]]
+                        if opcode[1] > 0:
+                            new_children.append('ResetStack')
             new_children.append(item)
         tree.children = new_children
 
@@ -146,7 +159,13 @@ class Compiler:
             grammar = f.read()
 
         parser = Lark(grammar, start='program', parser='lalr', lexer='standard')
-        tree = parser.parse(self.file.read())
+        try:
+            tree = parser.parse(self.file.read())
+        except Exception as e:
+            print("Parse error while parsing " + self.file.name + ":")
+            print(e)
+            exit(1)
+        
         self.add_resets(tree)
         self.compile_tree(tree.children)
         self.apply_jumps()
